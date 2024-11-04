@@ -1,1 +1,1 @@
-FROM nguyenphihugn/qodo-ai:github_action
+FROM phihung02/qodo-ai:github_action
