@@ -119,8 +119,7 @@ class PRReviewer:
                 self.auto_approve_logic()
                 return None
 
-            get_logger().info(f'Reviewing PR: {self.pr_url} ...')
-            get_logger().info(f'huhu 123')
+            get_logger().info(f'Reviewing PR: {self.pr_url} 123')
             relevant_configs = {'pr_reviewer': dict(get_settings().pr_reviewer),
                                 'config': dict(get_settings().config)}
             get_logger().debug("Relevant configs", artifacts=relevant_configs)
