@@ -165,13 +165,13 @@ def convert_to_markdown_v2(output_data: dict,
             if gfm_supported:
                 markdown_text += f"<tr><td>"
                 if is_value_no(value):
-                    markdown_text += f"{emoji}&nbsp;<strong>No relevant tests</strong>"
+                    markdown_text += f"{emoji}&nbsp;<strong>No relevant 00000000 tests</strong>"
                 else:
                     markdown_text += f"{emoji}&nbsp;<strong>PR contains tests</strong>"
                 markdown_text += f"</td></tr>\n"
             else:
                 if is_value_no(value):
-                    markdown_text += f'### {emoji} No relevant tests\n\n'
+                    markdown_text += f'### {emoji} No relevant 1111111 tests\n\n'
                 else:
                     markdown_text += f"### PR contains tests\n\n"
         elif 'ticket compliance check' in key_nice.lower():
