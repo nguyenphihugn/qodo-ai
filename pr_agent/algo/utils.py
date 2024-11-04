@@ -117,7 +117,7 @@ def convert_to_markdown_v2(output_data: dict,
         "Security concerns": "🔒",
         "Insights from user's answers": "📝",
         "Code feedback": "🤖",
-        "Estimated effort to review [1-5]": "⏱️",
+        "Estimated effort to review [1-5] AHHAHAHA": "⏱️",
         "Ticket compliance check": "🎫",
     }
     markdown_text = ""
