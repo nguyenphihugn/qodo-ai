@@ -9,6 +9,7 @@ from github import AppAuthentication, Auth, Github
 from retry import retry
 from starlette_context import context
 
+
 from ..algo.file_filter import filter_ignored
 from ..algo.language_handler import is_valid_file
 from ..algo.types import EDIT_TYPE
@@ -19,7 +20,7 @@ from ..servers.utils import RateLimitExceeded
 from .git_provider import FilePatchInfo, GitProvider, IncrementalPR, MAX_FILES_ALLOWED_FULL
 
 
-class GithubProvider(GitProvider):
+class GiteaProvider(GitProvider):
     def __init__(self, pr_url: Optional[str] = None):
         self.repo_obj = None
         try:
@@ -27,7 +28,8 @@ class GithubProvider(GitProvider):
         except Exception:
             self.installation_id = None
         self.max_comment_chars = 65000
-        self.base_url = get_settings().get("GITHUB.BASE_URL", "https://api.github.com").rstrip("/") # "https://api.github.com"
+        
+        self.base_url = get_settings().get("GITHUB.BASE_URL", "https://gitea.zien.vn/api/v1").rstrip("/") # "https://api.github.com"
         self.base_url_html = self.base_url.split("api/")[0].rstrip("/") if "api/" in self.base_url else "https://github.com"
         self.github_client = self._get_github_client()
         self.repo = None
@@ -612,7 +614,7 @@ class GithubProvider(GitProvider):
 
         if parsed_url.path.startswith('/api/v3'):
             parsed_url = urlparse(pr_url.replace("/api/v3", ""))
-
+        get_logger().debug(f"parsed_url: {parsed_url}")
         path_parts = parsed_url.path.strip('/').split('/')
         if 'api.github.com' in parsed_url.netloc or '/api/v3' in pr_url:
             if len(path_parts) < 5 or path_parts[3] != 'pulls':
@@ -624,8 +626,8 @@ class GithubProvider(GitProvider):
                 raise ValueError("Unable to convert PR number to integer") from e
             return repo_name, pr_number
 
-        if len(path_parts) < 4 or path_parts[2] != 'pull':
-            raise ValueError("The provided URL does not appear to be a GitHub PR URL")
+        if len(path_parts) < 4 or path_parts[2] != 'pulls':
+            raise ValueError("The provided URL does not appear to be a valid PR URL")
 
         repo_name = '/'.join(path_parts[:2])
         try:
@@ -638,13 +640,13 @@ class GithubProvider(GitProvider):
     def _parse_issue_url(self, issue_url: str) -> Tuple[str, int]:
         parsed_url = urlparse(issue_url)
 
-        if 'github.com' not in parsed_url.netloc:
-            raise ValueError("The provided URL is not a valid GitHub URL")
+        if 'github.com' not in parsed_url.netloc and 'gitea.zien.vn' not in parsed_url.netloc:
+            raise ValueError("The provided URL is not a valid GitHub or Gitea URL")
 
         path_parts = parsed_url.path.strip('/').split('/')
         if 'api.github.com' in parsed_url.netloc:
             if len(path_parts) < 5 or path_parts[3] != 'issues':
-                raise ValueError("The provided URL does not appear to be a GitHub ISSUE URL")
+                raise ValueError("The provided URL does not appear to be a valid issue URL")
             repo_name = '/'.join(path_parts[1:3])
             try:
                 issue_number = int(path_parts[4])
@@ -652,16 +654,27 @@ class GithubProvider(GitProvider):
                 raise ValueError("Unable to convert issue number to integer") from e
             return repo_name, issue_number
 
-        if len(path_parts) < 4 or path_parts[2] != 'issues':
-            raise ValueError("The provided URL does not appear to be a GitHub PR issue")
+        if 'github.com' in parsed_url.netloc:
+            if len(path_parts) < 4 or path_parts[2] != 'issues':
+                raise ValueError("The provided URL does not appear to be a valid issue URL")
+            repo_name = '/'.join(path_parts[:2])
+            try:
+                issue_number = int(path_parts[3])
+            except ValueError as e:
+                raise ValueError("Unable to convert issue number to integer") from e
+            return repo_name, issue_number
 
-        repo_name = '/'.join(path_parts[:2])
-        try:
-            issue_number = int(path_parts[3])
-        except ValueError as e:
-            raise ValueError("Unable to convert issue number to integer") from e
+        if 'gitea.zien.vn' in parsed_url.netloc:
+            if len(path_parts) < 4 or path_parts[2] != 'issues':
+                raise ValueError("The provided URL does not appear to be a valid issue URL")
+            repo_name = '/'.join(path_parts[:2])
+            try:
+                issue_number = int(path_parts[3])
+            except ValueError as e:
+                raise ValueError("Unable to convert issue number to integer") from e
+            return repo_name, issue_number
 
-        return repo_name, issue_number
+        raise ValueError("The provided URL does not appear to be a valid issue or PR URL")
 
     def _get_github_client(self):
         deployment_type = get_settings().get("GITHUB.DEPLOYMENT_TYPE", "user")
