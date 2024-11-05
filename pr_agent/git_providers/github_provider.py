@@ -625,7 +625,7 @@ class GithubProvider(GitProvider):
             return repo_name, pr_number
 
         if len(path_parts) < 4 or path_parts[2] != 'pull':
-            raise ValueError("The provided URL does not appear to be a GitHub PR URL")
+            raise ValueError("The provided URL does not appear to be a GitHub PR URL 123123")
 
         repo_name = '/'.join(path_parts[:2])
         try:
