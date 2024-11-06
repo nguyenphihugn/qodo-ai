@@ -39,8 +39,8 @@ class ModelType(str, Enum):
 
 
 class PRReviewHeader(str, Enum):
-    REGULAR = "## PR Reviewer Guide Hung Nguyen"
-    INCREMENTAL = "## Incremental PR Reviewer Guid ePhuc Hoang"
+    REGULAR = "## PR Reviewer Guide Hung Nguyen Phuc Hoang"
+    INCREMENTAL = "## Incremental PR Reviewer Guide"
 
 
 class PRDescriptionHeader(str, Enum):
