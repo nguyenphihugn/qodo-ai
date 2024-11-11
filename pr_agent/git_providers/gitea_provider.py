@@ -9,6 +9,7 @@ from github import AppAuthentication, Auth, Github
 from retry import retry
 from starlette_context import context
 
+from github import Requester, Consts, Repository
 from ..algo.file_filter import filter_ignored
 from ..algo.language_handler import is_valid_file
 from ..algo.types import EDIT_TYPE
@@ -19,7 +20,7 @@ from ..servers.utils import RateLimitExceeded
 from .git_provider import FilePatchInfo, GitProvider, IncrementalPR, MAX_FILES_ALLOWED_FULL
 
 
-class GithubProvider(GitProvider):
+class GiteaProvider(GitProvider):
     def __init__(self, pr_url: Optional[str] = None):
         self.repo_obj = None
         try:
@@ -27,8 +28,9 @@ class GithubProvider(GitProvider):
         except Exception:
             self.installation_id = None
         self.max_comment_chars = 65000
-        self.base_url = get_settings().get("GITHUB.BASE_URL", "https://api.github.com").rstrip("/") # "https://api.github.com"
-        self.base_url_html = self.base_url.split("api/")[0].rstrip("/") if "api/" in self.base_url else "https://github.com"
+        self.base_url = "https://gitea.zien.vn/api/v1"
+        self.base_url_html = self.base_url.split("api/")[0].rstrip(
+            "/") if "api/" in self.base_url else "https://github.com"
         self.github_client = self._get_github_client()
         self.repo = None
         self.pr_num = None
@@ -37,6 +39,8 @@ class GithubProvider(GitProvider):
         self.diff_files = None
         self.git_files = None
         self.incremental = IncrementalPR(False)
+        self.html_pr_url = pr_url
+
         if pr_url and 'pull' in pr_url:
             self.set_pr(pr_url)
             self.pr_commits = list(self.pr.get_commits())
@@ -55,7 +59,7 @@ class GithubProvider(GitProvider):
         return True
 
     def get_pr_url(self) -> str:
-        return self.pr.html_url
+        return self.html_pr_url
 
     def set_pr(self, pr_url: str):
         self.repo, self.pr_num = self._parse_pr_url(pr_url)
@@ -258,6 +262,7 @@ class GithubProvider(GitProvider):
             return None
         pr_comment = self.limit_output_characters(pr_comment, self.max_comment_chars)
         response = self.pr.create_issue_comment(pr_comment)
+        response._url = response._makeStringAttribute(f'{self.repo_obj.url}/issues/comments/{response.id}')
         if hasattr(response, "user") and hasattr(response.user, "login"):
             self.github_user_id = response.user.login
         response.is_temporary = is_temporary
@@ -447,6 +452,7 @@ class GithubProvider(GitProvider):
 
     def edit_comment(self, comment, body: str):
         body = self.limit_output_characters(body, self.max_comment_chars)
+        comment._url = comment._makeStringAttribute(f'{self.repo_obj.url}/issues/comments/{comment.id}')
         comment.edit(body=body)
 
     def edit_comment_from_comment_id(self, comment_id: int, body: str):
@@ -624,8 +630,8 @@ class GithubProvider(GitProvider):
                 raise ValueError("Unable to convert PR number to integer") from e
             return repo_name, pr_number
 
-        if len(path_parts) < 4 or path_parts[2] != 'pull':
-            raise ValueError("The provided URL does not appear to be a GitHub PR URL 123123")
+        if len(path_parts) < 4 or path_parts[2] != 'pulls':
+            raise ValueError("The provided URL does not appear to be a GitHub PR URL")
 
         repo_name = '/'.join(path_parts[:2])
         try:
@@ -696,9 +702,11 @@ class GithubProvider(GitProvider):
             self.repo_obj = self.github_client.get_repo(self.repo)
             return self.repo_obj
 
-
     def _get_pr(self):
-        return self._get_repo().get_pull(self.pr_num)
+        pr = self._get_repo().get_pull(self.pr_num)
+        pr._url = pr._makeStringAttribute(pr._url.value.replace('zien.vn', 'zien.vn/api/v1/repos'))
+        pr._issue_url = pr._makeStringAttribute(pr._url.value.replace('pulls', 'issues'))
+        return pr
 
     def get_pr_file_content(self, file_path: str, branch: str) -> str:
         try:
